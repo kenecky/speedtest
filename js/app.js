@@ -1,5 +1,6 @@
 import { Gauge, formatMbps } from './gauge.js';
 import { measurePing, measureThroughput, LIMITS } from './speedtest.js';
+import { closeOnOutsideClick, pullToRefresh } from './ui.js';
 
 const SERVERS = {
   cloudflare: { label: 'Cloudflare (speed.cloudflare.com)', base: 'https://speed.cloudflare.com' },
@@ -35,6 +36,14 @@ function syncSettings() {
 }
 [serverSel, customUrl, limitSel].forEach(e => e.addEventListener('input', syncSettings));
 syncSettings();
+closeOnOutsideClick($('settings'));
+
+// ---------- Aktualisieren durch Herunterwischen (oberes Viertel) ----------
+
+pullToRefresh($('ptr'), {
+  canStart: e => !$('settings').contains(e.target),
+  onRefresh: () => location.reload(),
+});
 
 function serverBase() {
   return serverSel.value === 'custom' ? customUrl.value.trim() : SERVERS[serverSel.value].base;

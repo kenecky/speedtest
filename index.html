@@ -14,11 +14,14 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div id="ptr" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
   <main>
     <header>
       <h1>Speedtest</h1>
       <details id="settings">
-        <summary aria-label="Einstellungen">⚙︎</summary>
+        <summary aria-label="Einstellungen" title="Einstellungen">⚙︎</summary>
         <div class="panel">
           <label>Server
             <select id="server"></select>

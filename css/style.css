@@ -13,7 +13,12 @@
 
 * { box-sizing: border-box; }
 
-html, body { margin: 0; height: 100%; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;              /* Seite scrollt nie */
+  overscroll-behavior: none;     /* kein natives Pull-to-Refresh / Gummiband */
+}
 
 body {
   background: radial-gradient(ellipse at 50% 0%, #1a2230 0%, var(--bg) 60%);
@@ -25,13 +30,33 @@ body {
 
 main {
   max-width: 480px;
+  height: 100vh;
+  height: 100dvh;
   margin: 0 auto;
-  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  min-height: 100%;
+  padding: max(8px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas: "header" "gauge" "results" "start" "error" "footer";
+  justify-items: center;
+  row-gap: clamp(8px, 2dvh, 16px);
+}
+header { grid-area: header; }
+#gauge { grid-area: gauge; }
+.results { grid-area: results; }
+#start { grid-area: start; }
+#error { grid-area: error; }
+footer { grid-area: footer; }
+
+/* Handy quer: Tacho links, Rest rechts */
+@media (orientation: landscape) and (max-height: 560px) {
+  main {
+    max-width: 900px;
+    grid-template-columns: 1.1fr 1fr;
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+    grid-template-areas: "header header" "gauge results" "gauge start" "gauge error" "gauge footer";
+    column-gap: 24px;
+    align-items: center;
+  }
 }
 
 header {
@@ -75,8 +100,15 @@ select, input {
 
 /* ---------- Tacho ---------- */
 
-#gauge { width: 100%; max-width: 400px; }
-.gauge { width: 100%; height: auto; display: block; --accent: var(--down); }
+#gauge {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gauge { width: auto; height: 100%; max-width: min(100%, 420px); max-height: 100%; display: block; --accent: var(--down); }
 .gauge[data-kind="up"] { --accent: var(--up); }
 .gauge[data-kind="ping"] { --accent: var(--ping); }
 
@@ -151,4 +183,36 @@ select, input {
   margin: 0; color: var(--danger); font-size: .9rem; text-align: center;
 }
 
-footer { margin-top: auto; color: var(--muted); font-size: .8rem; text-align: center; }
+footer { color: var(--muted); font-size: .8rem; text-align: center; }
+
+/* Niedrige Bildschirme: alles etwas kompakter */
+@media (max-height: 640px) {
+  .res { padding: 6px 10px; }
+  .res .val { font-size: 1.3rem; }
+  .res[data-k="ping"] .val, .res[data-k="jitter"] .val { font-size: 1.1rem; }
+  #start { padding: 10px 40px; }
+}
+
+/* ---------- Pull-to-Refresh ---------- */
+
+#ptr {
+  position: fixed;
+  top: 0; left: 50%;
+  z-index: 20;
+  width: 42px; height: 42px;
+  margin-left: -21px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  display: grid; place-items: center;
+  color: var(--muted);
+  transform: translateY(-60px);
+  opacity: 0;
+  pointer-events: none;
+}
+#ptr svg { width: 22px; height: 22px; }
+#ptr.ready { color: var(--down); border-color: var(--down); }
+#ptr.back { transition: transform .25s ease, opacity .25s ease; }
+#ptr.spin svg { animation: ptr-spin .7s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }

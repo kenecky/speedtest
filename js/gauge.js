@@ -100,7 +100,8 @@ export class Gauge {
     if (Math.abs(this.target - this.shown) < 0.005) this.shown = this.target;
     const f = frac(this.shown);
     this.needle.style.transform = `rotate(${START + (END - START) * f}deg)`;
-    this.fill.setAttribute('stroke-dasharray', `${f} 1`);
+    this.fill.setAttribute('stroke-dasharray', `${f} 2`);
+    this.fill.style.opacity = f > 0.002 ? 1 : 0;
     this.paintText();
     requestAnimationFrame(tt => this.frame(tt));
   }

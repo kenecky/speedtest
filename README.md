@@ -37,3 +37,13 @@ Für den Download muss der Server CORS erlauben (`Access-Control-Allow-Origin: *
 - **Abbruch je Richtung**, je nachdem, was zuerst eintritt: 6 Sekunden, Datenlimit erreicht, oder der Wert ist 1,5 s lang stabil (±7 %).
 - **Ergebnis:** Durchschnitt nach der Anlaufphase (0,7 s). Der Tacho zeigt live den Schnitt der letzten Sekunde.
 - **Datenlimit** (⚙︎): Klein ca. 10 MB, Normal ca. 35 MB, Genau ca. 150 MB insgesamt. Bei sehr schnellen Leitungen (Gigabit) misst „Klein“/„Normal“ zu niedrig, weil das Limit vor dem vollen Tempo erreicht ist.
+
+## Logo-Entwürfe
+
+In `logos/` liegen drei Entwürfe (A Tacho, B Pfeile, C Stoppuhr). Das App-Icon (`icons/`) ist noch das ursprüngliche.
+
+## Bedienung
+
+- Die Seite scrollt nie und passt sich der Bildschirmhöhe an (quer: Tacho links, Werte rechts).
+- Einstellungen (⚙︎) schließen bei einem Tipp daneben, mit erneutem Tipp auf ⚙︎ oder mit Esc.
+- **Aktualisieren:** im oberen Viertel des Bildschirms nach unten wischen.
