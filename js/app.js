@@ -1,6 +1,7 @@
 import { Gauge, formatMbps } from './gauge.js';
 import { measurePing, measureThroughput, LIMITS } from './speedtest.js';
 import { closeOnOutsideClick, pullToRefresh } from './ui.js';
+import { watchConnection } from './connection.js';
 
 const SERVERS = {
   cloudflare: { label: 'Cloudflare (speed.cloudflare.com)', base: 'https://speed.cloudflare.com' },
@@ -37,6 +38,8 @@ function syncSettings() {
 [serverSel, customUrl, limitSel].forEach(e => e.addEventListener('input', syncSettings));
 syncSettings();
 closeOnOutsideClick($('settings'));
+
+watchConnection($('conn'));
 
 // ---------- Aktualisieren durch Herunterwischen (oberes Viertel) ----------
 

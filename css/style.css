@@ -66,7 +66,21 @@ header {
   align-items: flex-start;
 }
 
-h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: .04em; margin: 8px 0 0; }
+h1 { font-size: 1.15rem; font-weight: 600; letter-spacing: .04em; margin: 0; }
+.brand { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.brand img { border-radius: 8px; }
+.conn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: .75rem; font-weight: 600;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.conn[hidden] { display: none; }
+.conn svg { width: 14px; height: 14px; }
+.conn[data-type="offline"] { color: var(--danger); border-color: var(--danger); }
 
 details { position: relative; }
 summary {

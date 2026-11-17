@@ -40,10 +40,14 @@ Für den Download muss der Server CORS erlauben (`Access-Control-Allow-Origin: *
 
 ## Logo-Entwürfe
 
-In `logos/` liegen drei Entwürfe (A Tacho, B Pfeile, C Stoppuhr). Das App-Icon (`icons/`) ist noch das ursprüngliche.
+In `logos/` liegen drei Entwürfe (A Tacho, B Pfeile, C Stoppuhr). Gewählt: **A Tacho** – ist das App-Icon (`icons/`).
 
 ## Bedienung
 
 - Die Seite scrollt nie und passt sich der Bildschirmhöhe an (quer: Tacho links, Werte rechts).
 - Einstellungen (⚙︎) schließen bei einem Tipp daneben, mit erneutem Tipp auf ⚙︎ oder mit Esc.
 - **Aktualisieren:** im oberen Viertel des Bildschirms nach unten wischen.
+
+## Verbindungsart
+
+Neben dem Titel steht WLAN / Mobile Daten / LAN, wenn der Browser es verrät (`navigator.connection.type`). Das kann nur Chrome auf Android; iPhone (alle Browser), Firefox und Desktop-Browser geben die Art nicht preis – dann wird nichts angezeigt. „Offline“ wird überall erkannt.
