@@ -105,6 +105,12 @@ details[open] summary { background: var(--panel); color: var(--text); }
   box-shadow: 0 12px 32px rgba(0,0,0,.5);
 }
 .panel label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
+.diag {
+  margin: 0; padding-top: 10px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 10px;
+  font-size: .75rem; color: var(--muted);
+}
+.diag dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
 select, input {
   font: inherit; color: var(--text);
   background: var(--bg); border: 1px solid var(--line);

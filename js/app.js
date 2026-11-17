@@ -9,6 +9,8 @@ const SERVERS = {
   custom:     { label: 'Eigene Adresse …', base: null },
 };
 
+export const APP_VERSION = 'v4';
+
 const $ = id => document.getElementById(id);
 const gauge = new Gauge($('gauge'));
 
@@ -39,7 +41,8 @@ function syncSettings() {
 syncSettings();
 closeOnOutsideClick($('settings'));
 
-watchConnection($('conn'));
+watchConnection($('conn'), $('diagConn'));
+$('diagVersion').textContent = APP_VERSION;
 
 // ---------- Aktualisieren durch Herunterwischen (oberes Viertel) ----------
 

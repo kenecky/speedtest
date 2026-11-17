@@ -18,13 +18,26 @@ const TYPES = {
   wimax:     { label: 'WiMAX',        icon: 'cellular' },
 };
 
+/** Klartext, warum (k)eine Verbindungsart angezeigt wird – für die Einstellungen */
+export function connectionDiagnosis() {
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const c = navigator.connection;
+  if (!navigator.onLine) return 'Offline';
+  if (ios) return 'iPhone/iPad: Apple gibt die Verbindungsart nicht an Webseiten weiter (auch nicht in Chrome).';
+  if (!c) return 'Dieser Browser bietet keine Verbindungsinfo an.';
+  if (!c.type) return `Browser liefert keine Verbindungsart (nur Schätzung: ${c.effectiveType || '–'}).`;
+  return `type = ${c.type}` + (c.effectiveType ? `, effectiveType = ${c.effectiveType}` : '');
+}
+
 export function currentConnection() {
   if (!navigator.onLine) return 'offline';
   return navigator.connection?.type ?? null; // null = unbekannt
 }
 
-export function watchConnection(el) {
+export function watchConnection(el, diagEl) {
   const render = () => {
+    if (diagEl) diagEl.textContent = connectionDiagnosis();
     const type = currentConnection();
     const info = type === 'offline' ? { label: 'Offline', icon: 'offline' } : TYPES[type];
     el.hidden = !info;
