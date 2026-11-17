@@ -58,4 +58,6 @@ Neben dem Titel steht WLAN / Mobile Daten / LAN, wenn der Browser es verrät (`n
 - **GO-Knopf** in der Tacho-Mitte; beim Start schlägt die Nadel einmal voll aus. Bei Tempo zittert sie leicht, ab 500 Mbit/s roter Bereich. Am Ende vibriert das Handy (nur Android).
 - **Live-Kurve** unter dem Tacho: Verlauf von Download und Upload während der Messung (je eigene Skala – zeigt, ob die Leitung schwankt).
 - **Anbieter und Serverstandort** in der Fußzeile (z. B. „Telekom · Server Frankfurt“), sofern der Server sie liefert.
-- **Verlauf** (Uhr-Symbol): alle Messungen mit Verbindungsart und Anbieter, Durchschnitt, Filter WLAN/Mobil, Diagramm der letzten 30 Messungen. Gespeichert nur lokal im Browser.
+- **Verlauf** (Uhr-Symbol): alle Messungen mit Verbindungsart, Anbieter und Ort, Durchschnitt, Filter WLAN/Mobil, Diagramm der letzten 30 Messungen und eine **Karte der Messorte**. Gespeichert nur lokal im Browser.
+- **Standort** (⚙︎ → „Standort im Verlauf“): *Genau* per GPS (Browser fragt einmal), *Ungefähr* über die IP-Adresse (aus Cloudflares `/meta`) oder *Aus*. Ohne GPS-Erlaubnis wird automatisch der IP-Standort genommen. Ortsnamen zu GPS-Koordinaten liefert OpenStreetMap Nominatim; dafür gehen die Koordinaten einer Messung einmal an nominatim.openstreetmap.org.
+- **Karte:** Leaflet (in `vendor/leaflet`, BSD-2-Lizenz) mit Kacheln von OpenStreetMap. Messungen am selben Ort (~100 m) werden zusammengefasst; die Zahl ist der Ø-Download, die Farbe die Verbindungsart, gestrichelt = nur ungefährer Standort.

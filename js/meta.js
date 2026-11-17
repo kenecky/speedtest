@@ -50,7 +50,7 @@ async function withTimeout(promiseFn, ms = 3000) {
 
 /** → { isp, colo, coloCity, city, source } – Felder können null sein */
 export async function fetchMeta(base) {
-  const out = { isp: null, colo: null, coloCity: null, city: null, source: 'keine' };
+  const out = { isp: null, colo: null, coloCity: null, city: null, client: null, source: 'keine' };
 
   // 1) JSON-Endpunkt
   try {
@@ -63,6 +63,11 @@ export async function fetchMeta(base) {
       out.colo = str(c) || str(c?.iata) || str(c?.code);
       out.coloCity = str(c?.city);
       out.city = str(j.server); // eigener Server liefert „server“
+      // ungefährer Standort des Nutzers (aus der IP-Adresse)
+      const lat = parseFloat(j.latitude), lon = parseFloat(j.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lon) && (lat || lon)) {
+        out.client = { lat, lon, city: str(j.city) };
+      }
       if (out.isp || out.colo || out.city) { out.source = '/meta'; return out; }
     }
   } catch {}

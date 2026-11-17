@@ -5,8 +5,9 @@ import { watchConnection, currentConnection } from './connection.js';
 import { fetchMeta, describeMeta } from './meta.js';
 import { Spark } from './spark.js';
 import { HistoryView, addEntry } from './history.js';
+import { LOCATION_MODES, getGpsPosition, resolveLocation, locationStatus } from './location.js';
 
-export const APP_VERSION = 'v7';
+export const APP_VERSION = 'v8';
 
 const SERVERS = {
   cloudflare: { label: 'Cloudflare (speed.cloudflare.com)', short: 'Cloudflare', base: 'https://speed.cloudflare.com' },
@@ -26,9 +27,17 @@ const store = {
 
 // ---------- Einstellungen ----------
 
-const serverSel = $('server'), customUrl = $('customUrl'), limitSel = $('limit');
+const serverSel = $('server'), customUrl = $('customUrl'), limitSel = $('limit'), locSel = $('locMode');
 for (const [k, s] of Object.entries(SERVERS)) serverSel.add(new Option(s.label, k));
 for (const [k, l] of Object.entries(LIMITS)) limitSel.add(new Option(l.label, k));
+for (const [k, l] of Object.entries(LOCATION_MODES)) locSel.add(new Option(l, k));
+locSel.value = store.get('locMode', 'gps');
+if (!LOCATION_MODES[locSel.value]) locSel.value = 'gps';
+locSel.addEventListener('input', () => {
+  store.set('locMode', locSel.value);
+  // Erlaubnis gleich beim Einschalten abfragen, nicht erst mitten im Test
+  if (locSel.value === 'gps') getGpsPosition().then(() => { $('diagLoc').textContent = locationStatus(); });
+});
 serverSel.value = store.get('server', 'cloudflare');
 customUrl.value = store.get('customUrl', '');
 limitSel.value = store.get('limit', 'normal');
@@ -118,6 +127,8 @@ async function run() {
   const limit = LIMITS[limitSel.value];
   const conn = currentConnection();
   const metaPromise = refreshMeta().catch(() => {});
+  const locMode = locSel.value;
+  const gpsPromise = locMode === 'gps' ? getGpsPosition() : Promise.resolve(null);
   let used = 0;
 
   try {
@@ -162,11 +173,8 @@ async function run() {
     }
     spark.done();
 
-    await metaPromise;
-    addEntry({
-      t: Date.now(), conn, ping, jitter, down: result.down, up: result.up,
-      isp: meta?.isp || null, colo: meta?.colo || null, server: serverShort(), used,
-    });
+    // Verlauf im Hintergrund speichern – das Ergebnis erscheint sofort
+    saveEntry({ conn, ping, jitter, down: result.down, up: result.up, used }, metaPromise, locMode, gpsPromise);
 
     // Endstand: Zeiger zeigt den Download, danach wieder GO
     gauge.setState('done');
@@ -184,6 +192,22 @@ async function run() {
     running = null;
     document.body.classList.remove('running');
   }
+}
+
+async function saveEntry(data, metaPromise, locMode, gpsPromise) {
+  const t = Date.now();
+  await metaPromise;
+  const { loc, place } = await Promise.race([
+    resolveLocation(locMode, gpsPromise, meta),
+    new Promise(res => setTimeout(() => res({ loc: null, place: null }), 15000)),
+  ]);
+  $('diagLoc').textContent = locationStatus();
+  addEntry({
+    t, ...data,
+    isp: meta?.isp || null, colo: meta?.colo || null, server: serverShort(),
+    loc, place,
+  });
+  if (history.isOpen) history.render();
 }
 
 $('cancel').addEventListener('click', () => running?.abort());

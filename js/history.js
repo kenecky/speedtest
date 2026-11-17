@@ -1,6 +1,7 @@
 // Verlauf: Messungen lokal speichern und als Übersicht, Diagramm und Liste zeigen.
 import { formatMbps } from './gauge.js';
 import { CONN_LABELS } from './connection.js';
+import { renderMap } from './map.js';
 
 const KEY = 'history';
 const MAX_ENTRIES = 300;
@@ -55,12 +56,16 @@ export class HistoryView {
   }
 
   close() {
+    this.map?.remove();
+    this.map = null;
     this.sheet.classList.remove('open');
     setTimeout(() => { this.sheet.hidden = true; }, 220);
   }
 
   render() {
     const all = loadHistory();
+    this.map?.remove();
+    this.map = null;
     this.body.replaceChildren();
     if (!all.length) {
       this.body.append(h('p', 'empty', 'Noch keine Messungen. Starte einen Test mit GO – jedes Ergebnis landet hier.'));
@@ -100,13 +105,29 @@ export class HistoryView {
     // Diagramm
     this.body.append(this.chart(list.slice(-30)));
 
+    // Karte der Messorte
+    const located = list.filter(e => e.loc && Number.isFinite(e.loc.lat) && Number.isFinite(e.loc.lon));
+    const fig = h('figure', 'map-fig');
+    if (located.length) {
+      const mapEl = h('div', 'map');
+      const legend = h('figcaption', 'map-legend');
+      legend.append(h('span', 'lg wifi', 'WLAN'), h('span', 'lg cell', 'Mobil'), h('span', 'lg other', 'andere / gemischt'), h('span', 'lg approx', 'ungefähr (IP)'));
+      fig.append(mapEl, legend);
+      renderMap(mapEl, located)
+        .then(m => { if (mapEl.isConnected) this.map = m; else m.remove(); })
+        .catch(err => mapEl.replaceChildren(h('p', 'empty', err.message)));
+    } else {
+      fig.append(h('p', 'map-empty', 'Noch keine Messung mit Standort. Ab jetzt wird der Ort mitgespeichert (Einstellung unter ⚙︎).'));
+    }
+    this.body.append(fig);
+
     // Liste (neueste zuerst)
     const ul = h('ul', 'entries');
-    for (const e of [...list].reverse()) {
+    for (const e of [...list].sort((a, b) => b.t - a.t)) {
       const li = h('li');
       const left = h('div', 'e-left');
       left.append(h('span', 'e-date', fmtDate(e.t)));
-      const sub = [CONN_LABELS[e.conn] || 'Verbindung unbekannt', e.isp].filter(Boolean).join(' · ');
+      const sub = [CONN_LABELS[e.conn] || 'Verbindung unbekannt', e.isp, e.place].filter(Boolean).join(' · ');
       left.append(h('span', 'e-sub', sub));
       const right = h('div', 'e-right');
       right.append(h('span', 'e-down', `↓ ${formatMbps(e.down)}`), h('span', 'e-up', `↑ ${formatMbps(e.up)}`), h('span', 'e-ping', `${fmtMs(e.ping)} ms`));
