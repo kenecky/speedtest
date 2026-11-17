@@ -224,7 +224,7 @@ select, input {
   transition: border-color .2s;
 }
 .res .lbl { grid-column: 1 / -1; font-size: .8rem; color: var(--muted); }
-.res .val { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.res .val { font-size: clamp(1.2rem, 6.2vw, 1.6rem); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .res .unit { font-size: .8rem; color: var(--muted); }
 .res[data-k="down"] { --c: var(--down); }
 .res[data-k="up"] { --c: var(--up); }
@@ -255,7 +255,7 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; }
 /* Niedrige Bildschirme: alles etwas kompakter */
 @media (max-height: 640px) {
   .res { padding: 6px 10px; }
-  .res .val { font-size: 1.3rem; }
+  .res .val { font-size: min(1.3rem, 5.6vw); }
   .res[data-k="ping"] .val, .res[data-k="jitter"] .val { font-size: 1.1rem; }
   .spark-half svg { height: 22px; }
 }
@@ -365,6 +365,34 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; }
 }
 .e-left, .e-right { display: grid; min-width: 0; }
 .e-left { flex: 1; }
+.entries li { padding-right: 4px; }
+.e-del {
+  flex-shrink: 0;
+  width: 36px; height: 36px; margin-left: -4px;
+  display: grid; place-items: center;
+  background: none; border: 0; border-radius: 50%;
+  color: var(--muted); cursor: pointer;
+}
+.e-del svg { width: 18px; height: 18px; }
+.e-del:hover, .e-del:focus-visible { color: var(--danger); background: rgba(248,113,113,.1); }
+
+.toast {
+  position: absolute; left: 50%; bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 10px 10px 16px;
+  background: var(--text); color: var(--bg);
+  border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  font-size: .9rem; white-space: nowrap;
+  animation: toast-in .2s ease;
+}
+.toast button {
+  font: inherit; font-weight: 700; color: var(--bg);
+  background: none; border: 1px solid rgba(13,17,23,.25); border-radius: 8px;
+  padding: 5px 10px; cursor: pointer;
+}
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px); } }
 .e-right { flex-shrink: 0; white-space: nowrap; }
 .e-date { font-weight: 600; font-variant-numeric: tabular-nums; }
 .e-sub { font-size: .75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

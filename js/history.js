@@ -16,8 +16,20 @@ function saveHistory(list) {
 export function addEntry(entry) {
   const list = loadHistory();
   list.push(entry);
+  list.sort((a, b) => a.t - b.t);
   saveHistory(list);
 }
+/** einzelnen Eintrag löschen (Zeitstempel dient als Kennung) – gibt ihn zurück */
+export function removeEntry(t) {
+  const list = loadHistory();
+  const i = list.findIndex(e => e.t === t);
+  if (i < 0) return null;
+  const [removed] = list.splice(i, 1);
+  saveHistory(list);
+  return removed;
+}
+
+const TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
 
 const connGroup = c => (c === 'wifi' ? 'wifi' : c === 'cellular' ? 'cellular' : c === 'ethernet' ? 'ethernet' : 'other');
 const GROUP_LABEL = { all: 'Alle', wifi: 'WLAN', cellular: 'Mobil', ethernet: 'LAN', other: 'Unbekannt' };
@@ -56,6 +68,7 @@ export class HistoryView {
   }
 
   close() {
+    this.toastEl?.remove();
     this.map?.remove();
     this.map = null;
     this.sheet.classList.remove('open');
@@ -131,7 +144,13 @@ export class HistoryView {
       left.append(h('span', 'e-sub', sub));
       const right = h('div', 'e-right');
       right.append(h('span', 'e-down', `↓ ${formatMbps(e.down)}`), h('span', 'e-up', `↑ ${formatMbps(e.up)}`), h('span', 'e-ping', `${fmtMs(e.ping)} ms`));
-      li.append(left, right);
+      const del = h('button', 'e-del');
+      del.type = 'button';
+      del.setAttribute('aria-label', `Messung vom ${fmtDate(e.t)} löschen`);
+      del.title = 'Löschen';
+      del.innerHTML = TRASH;
+      del.addEventListener('click', () => this.remove(e.t));
+      li.append(left, right, del);
       ul.append(li);
     }
     this.body.append(ul);
@@ -142,6 +161,28 @@ export class HistoryView {
       if (confirm('Alle gespeicherten Messungen löschen?')) { saveHistory([]); this.render(); }
     });
     this.body.append(del);
+  }
+
+  remove(t) {
+    const removed = removeEntry(t);
+    if (!removed) return;
+    this.render();
+    this.toast('Messung gelöscht', 'Rückgängig', () => { addEntry(removed); this.render(); });
+  }
+
+  toast(text, action, onAction) {
+    clearTimeout(this.toastTimer);
+    this.toastEl?.remove();
+    const el = h('div', 'toast');
+    el.setAttribute('role', 'status');
+    el.append(h('span', '', text));
+    const b = h('button', '', action);
+    b.type = 'button';
+    b.addEventListener('click', () => { el.remove(); onAction(); });
+    el.append(b);
+    this.sheet.append(el);
+    this.toastEl = el;
+    this.toastTimer = setTimeout(() => el.remove(), 5000);
   }
 
   chart(list) {

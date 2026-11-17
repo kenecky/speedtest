@@ -163,3 +163,7 @@ export function formatMbps(v) {
     ? v.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
     : Math.round(v).toLocaleString('de-DE');
 }
+
+/** Ergebnis mit genau zwei Nachkommastellen, z. B. „79,43“ */
+export const formatMbps2 = v =>
+  v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -1,6 +1,6 @@
 // Service Worker: hält nur die App-Dateien offline vor.
 // Messanfragen (/__down, /__up, andere Server) werden NIE abgefangen.
-const VERSION = 'speedtest-v8';
+const VERSION = 'speedtest-v9';
 const ASSETS = [
   './', './index.html', './css/style.css',
   './js/app.js', './js/gauge.js', './js/speedtest.js', './js/ui.js', './js/connection.js', './js/meta.js', './js/spark.js', './js/history.js', './js/map.js', './js/location.js',

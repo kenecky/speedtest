@@ -1,4 +1,4 @@
-import { Gauge, formatMbps } from './gauge.js';
+import { Gauge, formatMbps2 } from './gauge.js';
 import { measurePing, measureThroughput, LIMITS, MAX_TIME } from './speedtest.js';
 import { closeOnOutsideClick, pullToRefresh } from './ui.js';
 import { watchConnection, currentConnection } from './connection.js';
@@ -7,7 +7,7 @@ import { Spark } from './spark.js';
 import { HistoryView, addEntry } from './history.js';
 import { LOCATION_MODES, getGpsPosition, resolveLocation, locationStatus } from './location.js';
 
-export const APP_VERSION = 'v8';
+export const APP_VERSION = 'v9';
 
 const SERVERS = {
   cloudflare: { label: 'Cloudflare (speed.cloudflare.com)', short: 'Cloudflare', base: 'https://speed.cloudflare.com' },
@@ -162,7 +162,7 @@ async function run() {
       result[kind] = r.mbps;
       used += r.bytes;
       $('used').textContent = fmtMB(used);
-      setResult(kind, formatMbps(r.mbps));
+      setResult(kind, formatMbps2(r.mbps));
       if (kind === 'up') {
         $('diagUpload').textContent = r.uploadMode === 'xhr'
           ? 'fein (mit Fortschritt)'
