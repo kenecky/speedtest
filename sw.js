@@ -1,6 +1,6 @@
 // Service Worker: hält nur die App-Dateien offline vor.
 // Messanfragen (/__down, /__up, andere Server) werden NIE abgefangen.
-const VERSION = 'speedtest-v4';
+const VERSION = 'speedtest-v5';
 const ASSETS = [
   './', './index.html', './css/style.css',
   './js/app.js', './js/gauge.js', './js/speedtest.js', './js/ui.js', './js/connection.js',
@@ -22,9 +22,11 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/__')) return;
-  // Netz zuerst (immer aktuell), Cache als Offline-Rückfall
+  // Netz zuerst (immer aktuell), Cache als Offline-Rückfall.
+  // cache: 'no-cache' umgeht den HTTP-Cache des Browsers (GitHub Pages: 10 Min.),
+  // sonst kann eine Mischung aus alten und neuen Dateien geladen werden.
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' })
       .then(res => {
         if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
         return res;

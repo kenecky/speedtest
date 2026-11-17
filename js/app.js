@@ -9,7 +9,7 @@ const SERVERS = {
   custom:     { label: 'Eigene Adresse …', base: null },
 };
 
-export const APP_VERSION = 'v4';
+export const APP_VERSION = 'v5';
 
 const $ = id => document.getElementById(id);
 const gauge = new Gauge($('gauge'));
