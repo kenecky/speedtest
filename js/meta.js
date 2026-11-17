@@ -28,12 +28,17 @@ const SHORT = [
 ];
 
 export function shortIsp(name) {
-  if (!name) return null;
+  if (typeof name !== 'string' || !name) return null;
   for (const [re, short] of SHORT) if (re.test(name)) return short;
   return name.replace(/\s+(AG|GmbH|SE|Ltd\.?|Inc\.?|B\.V\.|S\.A\.)$/i, '').trim();
 }
 
-export const coloName = code => (code ? COLOS[code.toUpperCase()] || code.toUpperCase() : null);
+export const coloName = code => {
+  if (typeof code !== 'string' || !code) return null;
+  return COLOS[code.toUpperCase()] || code.toUpperCase();
+};
+
+const str = v => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
 const join = (base, path) => base.replace(/\/+$/, '') + path;
 
@@ -43,17 +48,21 @@ async function withTimeout(promiseFn, ms = 3000) {
   try { return await promiseFn(ctrl.signal); } finally { clearTimeout(t); }
 }
 
-/** → { isp, colo, city, source } – Felder können null sein */
+/** → { isp, colo, coloCity, city, source } – Felder können null sein */
 export async function fetchMeta(base) {
-  const out = { isp: null, colo: null, city: null, source: 'keine' };
+  const out = { isp: null, colo: null, coloCity: null, city: null, source: 'keine' };
 
   // 1) JSON-Endpunkt
   try {
     const j = await withTimeout(sig => fetch(join(base, '/meta'), { cache: 'no-store', signal: sig }).then(r => r.ok ? r.json() : null));
     if (j && typeof j === 'object') {
-      out.isp = shortIsp(j.asOrganization) || (j.asn ? ASNS[j.asn] || `AS${j.asn}` : null);
-      out.colo = j.colo || null;
-      out.city = j.server || null; // eigener Server liefert „server“
+      const asn = typeof j.asn === 'object' ? j.asn?.asn : j.asn;
+      out.isp = shortIsp(j.asOrganization ?? j.asn?.name) || (asn ? ASNS[asn] || `AS${asn}` : null);
+      // colo kommt je nach Version als Kürzel ("FRA") oder als Objekt ({ iata, city, … })
+      const c = j.colo;
+      out.colo = str(c) || str(c?.iata) || str(c?.code);
+      out.coloCity = str(c?.city);
+      out.city = str(j.server); // eigener Server liefert „server“
       if (out.isp || out.colo || out.city) { out.source = '/meta'; return out; }
     }
   } catch {}
@@ -80,6 +89,7 @@ export async function fetchMeta(base) {
 /** Text für die Fußzeile, z. B. „Telekom · Server Frankfurt“ */
 export function describeMeta(meta, fallbackServer) {
   if (!meta) return `Server: ${fallbackServer}`;
-  const server = meta.city || (meta.colo ? `Server ${coloName(meta.colo)}` : `Server: ${fallbackServer}`);
+  const place = (meta.colo && COLOS[meta.colo.toUpperCase()]) || meta.coloCity || coloName(meta.colo);
+  const server = meta.city || (place ? `Server ${place}` : `Server: ${fallbackServer}`);
   return meta.isp ? `${meta.isp} · ${server}` : server;
 }

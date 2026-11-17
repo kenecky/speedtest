@@ -6,7 +6,7 @@ import { fetchMeta, describeMeta } from './meta.js';
 import { Spark } from './spark.js';
 import { HistoryView, addEntry } from './history.js';
 
-export const APP_VERSION = 'v6';
+export const APP_VERSION = 'v7';
 
 const SERVERS = {
   cloudflare: { label: 'Cloudflare (speed.cloudflare.com)', short: 'Cloudflare', base: 'https://speed.cloudflare.com' },
@@ -41,11 +41,16 @@ let meta = null;
 async function refreshMeta() {
   const base = serverBase();
   if (!meta) $('meta').textContent = describeMeta(null, serverShort());
-  const m = await fetchMeta(base);
-  if (base !== serverBase()) return; // inzwischen anderer Server gewählt
-  meta = m;
-  $('meta').textContent = describeMeta(meta, serverShort());
-  $('diagMeta').textContent = `Quelle: ${meta.source}` + (meta.isp ? `, ${meta.isp}` : '') + (meta.colo ? `, ${meta.colo}` : '');
+  try {
+    const m = await fetchMeta(base);
+    if (base !== serverBase()) return; // inzwischen anderer Server gewählt
+    meta = m;
+    $('meta').textContent = describeMeta(meta, serverShort());
+    $('diagMeta').textContent = `Quelle: ${meta.source}` + (meta.isp ? `, ${meta.isp}` : '') +
+      (meta.colo ? `, ${meta.colo}` : '') + (meta.coloCity ? ` (${meta.coloCity})` : '');
+  } catch (e) {
+    $('diagMeta').textContent = `Fehler: ${e.message}`;
+  }
 }
 
 let metaTimer;
