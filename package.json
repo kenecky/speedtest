@@ -1,0 +1,8 @@
+{
+  "name": "speedtest",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.mjs"
+  }
+}

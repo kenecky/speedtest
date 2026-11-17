@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Speedtest</title>
+  <meta name="description" content="Kleiner Internet-Speedtest mit Tacho">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Speedtest</h1>
+      <details id="settings">
+        <summary aria-label="Einstellungen">⚙︎</summary>
+        <div class="panel">
+          <label>Server
+            <select id="server"></select>
+          </label>
+          <input id="customUrl" type="url" placeholder="https://mein-server.example" hidden>
+          <label>Datenlimit
+            <select id="limit"></select>
+          </label>
+        </div>
+      </details>
+    </header>
+
+    <div id="gauge"></div>
+
+    <section class="results">
+      <div class="res" data-k="down"><span class="lbl">↓ Download</span><span class="val" id="down">–</span><span class="unit">Mbit/s</span></div>
+      <div class="res" data-k="up"><span class="lbl">↑ Upload</span><span class="val" id="up">–</span><span class="unit">Mbit/s</span></div>
+      <div class="res" data-k="ping"><span class="lbl">Ping</span><span class="val" id="ping">–</span><span class="unit">ms</span></div>
+      <div class="res" data-k="jitter"><span class="lbl">Jitter</span><span class="val" id="jitter">–</span><span class="unit">ms</span></div>
+    </section>
+
+    <button id="start" type="button">Start</button>
+
+    <p id="error" role="alert" hidden></p>
+
+    <footer>
+      Server: <span id="serverName"></span> · Datenverbrauch: <span id="used">0</span> MB
+    </footer>
+  </main>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
