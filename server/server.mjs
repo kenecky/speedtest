@@ -2,6 +2,7 @@
 // Liefert die App aus und stellt die Messpunkte bereit:
 //   GET  /__down?bytes=N   -> N Bytes Zufallsdaten
 //   POST /__up             -> Body wird gelesen und verworfen
+//   GET  /meta             -> Infos für die Anzeige
 // Start: node server/server.mjs   (Port über PORT=… änderbar)
 
 import http from 'node:http';
@@ -70,6 +71,10 @@ http.createServer((req, res) => {
     return down(req, res, Math.round(bytes));
   }
   if (url.pathname === '/__up' && req.method === 'POST') return up(req, res);
+  if (url.pathname === '/meta') {
+    res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ server: 'Eigener Server', clientIp: req.socket.remoteAddress }));
+  }
   if (req.method === 'GET') return serveStatic(req, res, url.pathname);
   res.writeHead(405); res.end();
 }).listen(PORT, () => console.log(`Speedtest läuft auf http://localhost:${PORT}`));

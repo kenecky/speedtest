@@ -1,18 +1,23 @@
 import { Gauge, formatMbps } from './gauge.js';
-import { measurePing, measureThroughput, LIMITS } from './speedtest.js';
+import { measurePing, measureThroughput, LIMITS, MAX_TIME } from './speedtest.js';
 import { closeOnOutsideClick, pullToRefresh } from './ui.js';
-import { watchConnection } from './connection.js';
+import { watchConnection, currentConnection } from './connection.js';
+import { fetchMeta, describeMeta } from './meta.js';
+import { Spark } from './spark.js';
+import { HistoryView, addEntry } from './history.js';
+
+export const APP_VERSION = 'v6';
 
 const SERVERS = {
-  cloudflare: { label: 'Cloudflare (speed.cloudflare.com)', base: 'https://speed.cloudflare.com' },
-  self:       { label: 'Dieser Server (server/server.mjs)', base: '' },
-  custom:     { label: 'Eigene Adresse …', base: null },
+  cloudflare: { label: 'Cloudflare (speed.cloudflare.com)', short: 'Cloudflare', base: 'https://speed.cloudflare.com' },
+  self:       { label: 'Dieser Server (server/server.mjs)', short: 'Dieser Server', base: '' },
+  custom:     { label: 'Eigene Adresse …', short: null, base: null },
 };
 
-export const APP_VERSION = 'v5';
-
 const $ = id => document.getElementById(id);
-const gauge = new Gauge($('gauge'));
+const gauge = new Gauge($('gauge'), { onGo: () => run() });
+const spark = new Spark($('spark'), MAX_TIME);
+const history = new HistoryView($('history'));
 
 const store = {
   get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
@@ -27,38 +32,53 @@ for (const [k, l] of Object.entries(LIMITS)) limitSel.add(new Option(l.label, k)
 serverSel.value = store.get('server', 'cloudflare');
 customUrl.value = store.get('customUrl', '');
 limitSel.value = store.get('limit', 'normal');
+if (!LIMITS[limitSel.value]) limitSel.value = 'normal';
 
-function syncSettings() {
+const serverBase = () => (serverSel.value === 'custom' ? customUrl.value.trim() : SERVERS[serverSel.value].base);
+const serverShort = () => (serverSel.value === 'custom' ? (customUrl.value.trim() || '–') : SERVERS[serverSel.value].short);
+
+let meta = null;
+async function refreshMeta() {
+  const base = serverBase();
+  if (!meta) $('meta').textContent = describeMeta(null, serverShort());
+  const m = await fetchMeta(base);
+  if (base !== serverBase()) return; // inzwischen anderer Server gewählt
+  meta = m;
+  $('meta').textContent = describeMeta(meta, serverShort());
+  $('diagMeta').textContent = `Quelle: ${meta.source}` + (meta.isp ? `, ${meta.isp}` : '') + (meta.colo ? `, ${meta.colo}` : '');
+}
+
+let metaTimer;
+function syncSettings(e) {
   customUrl.hidden = serverSel.value !== 'custom';
   store.set('server', serverSel.value);
   store.set('customUrl', customUrl.value.trim());
   store.set('limit', limitSel.value);
-  $('serverName').textContent = serverSel.value === 'custom'
-    ? (customUrl.value.trim() || '–')
-    : SERVERS[serverSel.value].label.replace(/ \(.*\)$/, '');
+  if (e?.target === limitSel) return;
+  meta = null;
+  clearTimeout(metaTimer);
+  metaTimer = setTimeout(refreshMeta, 400);
 }
-[serverSel, customUrl, limitSel].forEach(e => e.addEventListener('input', syncSettings));
+[serverSel, customUrl, limitSel].forEach(el => el.addEventListener('input', syncSettings));
 syncSettings();
 closeOnOutsideClick($('settings'));
 
 watchConnection($('conn'), $('diagConn'));
 $('diagVersion').textContent = APP_VERSION;
 
+$('openHistory').addEventListener('click', () => history.open());
+
 // ---------- Aktualisieren durch Herunterwischen (oberes Viertel) ----------
 
 pullToRefresh($('ptr'), {
-  canStart: e => !$('settings').contains(e.target),
+  canStart: e => !$('settings').contains(e.target) && !history.isOpen,
   onRefresh: () => location.reload(),
 });
 
-function serverBase() {
-  return serverSel.value === 'custom' ? customUrl.value.trim() : SERVERS[serverSel.value].base;
-}
-
 // ---------- Ablauf ----------
 
-const btn = $('start');
 let running = null;
+let idleTimer = null;
 
 const fmtMs = v => Math.round(v).toLocaleString('de-DE');
 const fmtMB = b => (b / 1e6).toLocaleString('de-DE', { maximumFractionDigits: 1 });
@@ -79,22 +99,29 @@ function showError(msg) {
 }
 
 async function run() {
+  if (running) return;
+  clearTimeout(idleTimer);
   const ctrl = new AbortController();
   running = ctrl;
-  btn.textContent = 'Abbrechen';
-  btn.classList.add('running');
+  document.body.classList.add('running');
   showError('');
   ['ping', 'jitter', 'down', 'up'].forEach(k => setResult(k, '–'));
   $('used').textContent = '0';
+  spark.reset();
 
   const base = serverBase();
   const limit = LIMITS[limitSel.value];
+  const conn = currentConnection();
+  const metaPromise = refreshMeta().catch(() => {});
   let used = 0;
 
   try {
+    gauge.setState('running');
+    await gauge.sweep();
+    if (ctrl.signal.aborted) throw new DOMException('Abgebrochen', 'AbortError');
+
     // Ping
     setActive('ping');
-    gauge.set(0);
     gauge.setPhase('PING', 'ping');
     gauge.setReadout('…', 'ms');
     const { ping, jitter } = await measurePing(base, {
@@ -112,34 +139,49 @@ async function run() {
       gauge.set(0);
       const r = await measureThroughput(kind, base, {
         maxBytes: limit[kind],
+        extend: limit.extend,
         signal: ctrl.signal,
-        onSpeed: v => gauge.set(v),
+        onSpeed: (v, ms) => { gauge.set(v); spark.add(kind, v, ms); },
       });
       result[kind] = r.mbps;
       used += r.bytes;
       $('used').textContent = fmtMB(used);
       setResult(kind, formatMbps(r.mbps));
+      if (kind === 'up') {
+        $('diagUpload').textContent = r.uploadMode === 'xhr'
+          ? 'fein (mit Fortschritt)'
+          : 'grob (Server erlaubt keinen Fortschritt)';
+      }
       gauge.set(r.mbps);
       await new Promise(res => setTimeout(res, 600));
     }
+    spark.done();
 
-    // Endstand: Zeiger zeigt den Download
+    await metaPromise;
+    addEntry({
+      t: Date.now(), conn, ping, jitter, down: result.down, up: result.up,
+      isp: meta?.isp || null, colo: meta?.colo || null, server: serverShort(), used,
+    });
+
+    // Endstand: Zeiger zeigt den Download, danach wieder GO
+    gauge.setState('done');
     gauge.set(result.down);
-    gauge.setPhase('FERTIG · DOWNLOAD', 'down');
+    gauge.setPhase('FERTIG', 'down');
+    navigator.vibrate?.([40, 60, 40]);
+    idleTimer = setTimeout(() => gauge.setState('idle'), 4000);
   } catch (e) {
-    gauge.set(0);
-    gauge.setPhase('', '');
+    spark.done();
+    gauge.setState('idle');
     gauge.setReadout('–', 'Mbit/s');
     if (e.name !== 'AbortError') showError(e.message);
   } finally {
     setActive(null);
     running = null;
-    btn.textContent = 'Start';
-    btn.classList.remove('running');
+    document.body.classList.remove('running');
   }
 }
 
-btn.addEventListener('click', () => (running ? running.abort() : run()));
+$('cancel').addEventListener('click', () => running?.abort());
 
 // ---------- PWA ----------
 

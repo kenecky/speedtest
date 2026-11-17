@@ -21,6 +21,7 @@ Die App spricht jeden Server an, der diese zwei Endpunkte hat:
 |---|---|
 | `GET /__down?bytes=N` | liefert N Bytes (Download, mit `bytes=0` auch Ping) |
 | `POST /__up` | nimmt Daten an und verwirft sie (Upload) |
+| `GET /meta` | optional: Anbieter und Standort für die Anzeige |
 
 Wählbar über ⚙︎:
 
@@ -33,10 +34,10 @@ Für den Download muss der Server CORS erlauben (`Access-Control-Allow-Origin: *
 ## Messverfahren
 
 - **Ping/Jitter:** 10 Mini-Anfragen nach einer Aufwärm-Anfrage. Ping = Median, Jitter = mittlere Abweichung aufeinanderfolgender Werte.
-- **Download/Upload:** 4 parallele Verbindungen. Die Paketgröße startet klein und verdoppelt sich, solange eine Anfrage kürzer als 300 ms dauert.
+- **Download/Upload:** 4 parallele Verbindungen. Der Upload wird mit Fortschritt gezählt (XHR); erlaubt der Server das nicht (CORS-Preflight), misst die App automatisch gröber pro abgeschlossener Anfrage weiter. Die Paketgröße startet klein und verdoppelt sich, solange eine Anfrage kürzer als 300 ms dauert.
 - **Abbruch je Richtung**, je nachdem, was zuerst eintritt: 6 Sekunden, Datenlimit erreicht, oder der Wert ist 1,5 s lang stabil (±7 %).
 - **Ergebnis:** Durchschnitt nach der Anlaufphase (0,7 s). Der Tacho zeigt live den Schnitt der letzten Sekunde.
-- **Datenlimit** (⚙︎): Klein ca. 10 MB, Normal ca. 35 MB, Genau ca. 150 MB insgesamt. Bei sehr schnellen Leitungen (Gigabit) misst „Klein“/„Normal“ zu niedrig, weil das Limit vor dem vollen Tempo erreicht ist.
+- **Datenlimit** (⚙︎): Klein ca. 10 MB, Normal ca. 35 MB, Genau ca. 150 MB insgesamt. Ist das Limit schon in der Anlaufphase aufgebraucht (Gigabit), wächst es bei „Normal“ bis aufs 4-Fache, bei „Genau“ aufs 2-Fache. „Klein“ bleibt immer klein.
 
 ## Logo-Entwürfe
 
@@ -51,3 +52,10 @@ In `logos/` liegen drei Entwürfe (A Tacho, B Pfeile, C Stoppuhr). Gewählt: **A
 ## Verbindungsart
 
 Neben dem Titel steht WLAN / Mobile Daten / LAN, wenn der Browser es verrät (`navigator.connection.type`). Das kann nur Chrome auf Android; iPhone (alle Browser), Firefox und Desktop-Browser geben die Art nicht preis – dann wird nichts angezeigt. „Offline“ wird überall erkannt.
+
+## Weitere Funktionen
+
+- **GO-Knopf** in der Tacho-Mitte; beim Start schlägt die Nadel einmal voll aus. Bei Tempo zittert sie leicht, ab 500 Mbit/s roter Bereich. Am Ende vibriert das Handy (nur Android).
+- **Live-Kurve** unter dem Tacho: Verlauf von Download und Upload während der Messung (je eigene Skala – zeigt, ob die Leitung schwankt).
+- **Anbieter und Serverstandort** in der Fußzeile (z. B. „Telekom · Server Frankfurt“), sofern der Server sie liefert.
+- **Verlauf** (Uhr-Symbol): alle Messungen mit Verbindungsart und Anbieter, Durchschnitt, Filter WLAN/Mobil, Diagramm der letzten 30 Messungen. Gespeichert nur lokal im Browser.

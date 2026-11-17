@@ -18,6 +18,8 @@ const TYPES = {
   wimax:     { label: 'WiMAX',        icon: 'cellular' },
 };
 
+export const CONN_LABELS = Object.fromEntries(Object.entries(TYPES).map(([k, v]) => [k, v.label]));
+
 /** Klartext, warum (k)eine Verbindungsart angezeigt wird – für die Einstellungen */
 export function connectionDiagnosis() {
   const ua = navigator.userAgent;
