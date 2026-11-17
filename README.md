@@ -35,8 +35,9 @@ Für den Download muss der Server CORS erlauben (`Access-Control-Allow-Origin: *
 
 - **Ping/Jitter:** 10 Mini-Anfragen nach einer Aufwärm-Anfrage. Ping = Median, Jitter = mittlere Abweichung aufeinanderfolgender Werte.
 - **Download/Upload:** 4 parallele Verbindungen. Der Upload wird mit Fortschritt gezählt (XHR); erlaubt der Server das nicht (CORS-Preflight), misst die App automatisch gröber pro abgeschlossener Anfrage weiter. Die Paketgröße startet klein und verdoppelt sich, solange eine Anfrage kürzer als 300 ms dauert.
-- **Abbruch je Richtung**, je nachdem, was zuerst eintritt: 6 Sekunden, Datenlimit erreicht, oder der Wert ist 1,5 s lang stabil (±7 %).
-- **Ergebnis:** Durchschnitt nach der Anlaufphase (0,7 s). Der Tacho zeigt live den Schnitt der letzten Sekunde.
+- **Ergebnis:** Median aller 1-Sekunden-Werte nach der Anlaufphase (0,7 s) – kurze Ausreißer zählen kaum. Darunter steht die **Spanne** (10.–90. Perzentil), also wie stark die Leitung schwankte. Der Tacho zeigt live den Schnitt der letzten Sekunde.
+- **Dauer:** mindestens 3 s nach der Anlaufphase, höchstens 8 s je Richtung; früher Stopp nur, wenn der Wert 2 s lang ruhig ist (±7 %).
+- **Verbindungen** (⚙︎): *4* (Standard, wie Ookla/Cloudflare), *1* (wie der Google-Test von M-Lab) oder *Beide vergleichen* – dann wird der Download zusätzlich mit 1 Verbindung gemessen („1 Verb.: …“). Ein großer Unterschied zeigt, dass eine einzelne Übertragung die Leitung nicht auslastet (typisch für WLAN mit Störungen oder weite Wege).
 - **Datenlimit** (⚙︎): Klein ca. 10 MB, Normal ca. 35 MB, Genau ca. 150 MB insgesamt. Ist das Limit schon in der Anlaufphase aufgebraucht (Gigabit), wächst es bei „Normal“ bis aufs 4-Fache, bei „Genau“ aufs 2-Fache. „Klein“ bleibt immer klein.
 
 ## Logo-Entwürfe

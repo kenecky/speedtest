@@ -12,7 +12,9 @@ export const LIMITS = {
 
 const CFG = {
   pingCount: 10,
-  maxTime: 6000,        // ms pro Richtung
+  maxTime: 8000,        // ms pro Richtung (höchstens)
+  minMeasureMs: 3000,   // so lange nach der Anlaufphase mindestens messen (Limit wächst ggf. mit)
+  stableCount: 20,      // so viele Werte (à 100 ms) müssen für einen frühen Stopp ruhig sein
   warmupMs: 700,        // Anlaufphase, fließt nicht ins Ergebnis ein
   windowMs: 1000,       // Fenster für die Live-Anzeige
   tickMs: 100,
@@ -115,8 +117,9 @@ function speedBetween(a, b) {
  * onSpeed(mbps, ms): Live-Wert für Tacho und Kurve
  * Rückgabe: { mbps, bytes, ms, extended, uploadMode }
  */
-export function measureThroughput(kind, base, { maxBytes, extend = 1, signal, onSpeed }) {
+export function measureThroughput(kind, base, { maxBytes, extend = 1, streams, signal, onSpeed }) {
   const cfg = CFG[kind];
+  const streamCount = streams || cfg.streams;
   const ctrl = new AbortController();
   const abortOuter = () => ctrl.abort();
   signal?.addEventListener('abort', abortOuter);
@@ -138,7 +141,7 @@ export function measureThroughput(kind, base, { maxBytes, extend = 1, signal, on
   const capReached = () => {
     const done = kind === 'up' ? bytes >= cap : used >= cap;
     if (!done) return false;
-    if (cap < capMax && performance.now() - t0 < CFG.warmupMs + 1500) {
+    if (cap < capMax && performance.now() - t0 < CFG.warmupMs + CFG.minMeasureMs) {
       cap = Math.min(capMax, cap * 2);
       return false;
     }
@@ -192,7 +195,8 @@ export function measureThroughput(kind, base, { maxBytes, extend = 1, signal, on
   return new Promise((resolve, reject) => {
     const samples = [{ t: 0, b: 0 }];
     const recent = [];
-    const workers = Array.from({ length: cfg.streams }, worker);
+    const windows = []; // 1-s-Werte, die komplett nach der Anlaufphase liegen
+    const workers = Array.from({ length: streamCount }, worker);
 
     let finished = false;
     const finish = () => {
@@ -206,11 +210,20 @@ export function measureThroughput(kind, base, { maxBytes, extend = 1, signal, on
         if (signal?.aborted) return reject(new DOMException('Abgebrochen', 'AbortError'));
         if (failure) return reject(failure);
         const last = samples[samples.length - 1];
-        // Ergebnis ohne Anlaufphase; bei sehr kurzen Tests die ganze Messung
+        // Durchschnitt ohne Anlaufphase (Rückfall bei sehr kurzen Messungen)
         let from = samples.find(s => s.t >= CFG.warmupMs);
         if (!from || last.t - from.t < 500) from = samples[0];
+        const avg = speedBetween(from, last);
+        // Ergebnis = Median der 1-s-Werte: kurze Ausreißer zählen kaum.
+        // Schwankung = 10. bis 90. Perzentil.
+        const sorted = [...windows].sort((a, b) => a - b);
+        const enough = sorted.length >= 5;
         resolve({
-          mbps: speedBetween(from, last), bytes: used, ms: last.t,
+          mbps: enough ? quantile(sorted, 0.5) : avg,
+          low: enough ? quantile(sorted, 0.1) : null,
+          high: enough ? quantile(sorted, 0.9) : null,
+          avg, streams: streamCount,
+          bytes: used, ms: last.t,
           extended: cap > maxBytes,
           uploadMode: kind === 'up' ? (useXhr ? 'xhr' : 'fetch') : undefined,
         });
@@ -224,11 +237,12 @@ export function measureThroughput(kind, base, { maxBytes, extend = 1, signal, on
       const old = samples.find(s => s.t >= now.t - CFG.windowMs) || samples[0];
       const cur = speedBetween(old === now ? samples[0] : old, now);
       onSpeed?.(cur, now.t);
+      if (old.t >= CFG.warmupMs - 1 && now.t - old.t >= CFG.windowMs * 0.8) windows.push(cur);
 
       if (now.t > CFG.warmupMs) recent.push(cur);
-      if (recent.length > 15) recent.shift();
+      if (recent.length > CFG.stableCount) recent.shift();
       const mean = recent.reduce((a, b) => a + b, 0) / (recent.length || 1);
-      const stable = recent.length === 15 && now.t > CFG.warmupMs + 2000 &&
+      const stable = recent.length === CFG.stableCount && now.t > CFG.warmupMs + CFG.minMeasureMs &&
         recent.every(v => Math.abs(v - mean) <= mean * 0.07);
 
       if (failure || signal?.aborted || now.t >= CFG.maxTime || stable || capReached()) finish();
@@ -237,3 +251,14 @@ export function measureThroughput(kind, base, { maxBytes, extend = 1, signal, on
 }
 
 export const MAX_TIME = CFG.maxTime;
+
+function quantile(sorted, q) {
+  const i = (sorted.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+}
+
+export const STREAM_MODES = {
+  multi:  { label: '4 Verbindungen (Standard)', streams: 4 },
+  single: { label: '1 Verbindung (wie Google)', streams: 1 },
+  both:   { label: 'Beide vergleichen (mehr Daten)', streams: 4 },
+};

@@ -1,5 +1,5 @@
-import { Gauge, formatMbps2 } from './gauge.js';
-import { measurePing, measureThroughput, LIMITS, MAX_TIME } from './speedtest.js';
+import { Gauge, formatMbps, formatMbps2 } from './gauge.js';
+import { measurePing, measureThroughput, LIMITS, MAX_TIME, STREAM_MODES } from './speedtest.js';
 import { closeOnOutsideClick, pullToRefresh } from './ui.js';
 import { watchConnection, currentConnection } from './connection.js';
 import { fetchMeta, describeMeta } from './meta.js';
@@ -7,7 +7,7 @@ import { Spark } from './spark.js';
 import { HistoryView, addEntry } from './history.js';
 import { LOCATION_MODES, getGpsPosition, resolveLocation, locationStatus } from './location.js';
 
-export const APP_VERSION = 'v9';
+export const APP_VERSION = 'v10';
 
 const SERVERS = {
   cloudflare: { label: 'Cloudflare (speed.cloudflare.com)', short: 'Cloudflare', base: 'https://speed.cloudflare.com' },
@@ -31,6 +31,11 @@ const serverSel = $('server'), customUrl = $('customUrl'), limitSel = $('limit')
 for (const [k, s] of Object.entries(SERVERS)) serverSel.add(new Option(s.label, k));
 for (const [k, l] of Object.entries(LIMITS)) limitSel.add(new Option(l.label, k));
 for (const [k, l] of Object.entries(LOCATION_MODES)) locSel.add(new Option(l, k));
+const streamSel = $('streams');
+for (const [k, m] of Object.entries(STREAM_MODES)) streamSel.add(new Option(m.label, k));
+streamSel.value = store.get('streams', 'multi');
+if (!STREAM_MODES[streamSel.value]) streamSel.value = 'multi';
+streamSel.addEventListener('input', () => store.set('streams', streamSel.value));
 locSel.value = store.get('locMode', 'gps');
 if (!LOCATION_MODES[locSel.value]) locSel.value = 'gps';
 locSel.addEventListener('input', () => {
@@ -97,10 +102,24 @@ let idleTimer = null;
 const fmtMs = v => Math.round(v).toLocaleString('de-DE');
 const fmtMB = b => (b / 1e6).toLocaleString('de-DE', { maximumFractionDigits: 1 });
 
-function setResult(id, text) {
+function setResult(id, text, sub) {
   const e = $(id);
   e.textContent = text;
   e.closest('.res').classList.toggle('done', text !== '–');
+  const subEl = $(`${id}Sub`);
+  if (subEl) {
+    subEl.textContent = sub || '';
+    subEl.title = sub ? 'Spanne: so stark schwankte der Wert während der Messung (10.–90. Perzentil)' : '';
+  }
+}
+
+/** Zusatzzeile unter dem Ergebnis: Schwankung und ggf. Vergleich mit 1 Verbindung */
+function describeRun(r, streamMode, single) {
+  const parts = [];
+  if (r.low != null) parts.push(`Spanne ${formatMbps(r.low)}–${formatMbps(r.high)}`);
+  if (single) parts.push(`1 Verb.: ${formatMbps(single.mbps)}`);
+  else if (streamMode === 'single') parts.push('1 Verbindung');
+  return parts.join('\n');
 }
 
 function setActive(id) {
@@ -149,6 +168,9 @@ async function run() {
 
     // Download & Upload
     const result = {};
+    const streamMode = streamSel.value;
+    const streams = STREAM_MODES[streamMode].streams;
+    const extra = {};
     for (const kind of ['down', 'up']) {
       setActive(kind);
       gauge.setPhase(kind === 'down' ? 'DOWNLOAD' : 'UPLOAD', kind);
@@ -156,13 +178,16 @@ async function run() {
       const r = await measureThroughput(kind, base, {
         maxBytes: limit[kind],
         extend: limit.extend,
+        streams,
         signal: ctrl.signal,
         onSpeed: (v, ms) => { gauge.set(v); spark.add(kind, v, ms); },
       });
       result[kind] = r.mbps;
+      extra[`${kind}Low`] = r.low;
+      extra[`${kind}High`] = r.high;
       used += r.bytes;
       $('used').textContent = fmtMB(used);
-      setResult(kind, formatMbps2(r.mbps));
+      setResult(kind, formatMbps2(r.mbps), describeRun(r, streamMode));
       if (kind === 'up') {
         $('diagUpload').textContent = r.uploadMode === 'xhr'
           ? 'fein (mit Fortschritt)'
@@ -170,11 +195,27 @@ async function run() {
       }
       gauge.set(r.mbps);
       await new Promise(res => setTimeout(res, 600));
+
+      // Vergleich: denselben Download noch einmal mit nur 1 Verbindung
+      if (kind === 'down' && streamMode === 'both') {
+        gauge.setPhase('DOWNLOAD · 1 VERBINDUNG', 'down');
+        gauge.set(0);
+        const r1 = await measureThroughput('down', base, {
+          maxBytes: limit.down, extend: limit.extend, streams: 1, signal: ctrl.signal,
+          onSpeed: v => gauge.set(v),
+        });
+        extra.down1 = r1.mbps;
+        used += r1.bytes;
+        $('used').textContent = fmtMB(used);
+        setResult('down', formatMbps2(r.mbps), describeRun(r, streamMode, r1));
+        gauge.set(r1.mbps);
+        await new Promise(res => setTimeout(res, 600));
+      }
     }
     spark.done();
 
     // Verlauf im Hintergrund speichern – das Ergebnis erscheint sofort
-    saveEntry({ conn, ping, jitter, down: result.down, up: result.up, used }, metaPromise, locMode, gpsPromise);
+    saveEntry({ conn, ping, jitter, down: result.down, up: result.up, used, streams: streamMode, ...extra }, metaPromise, locMode, gpsPromise);
 
     // Endstand: Zeiger zeigt den Download, danach wieder GO
     gauge.setState('done');

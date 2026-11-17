@@ -220,12 +220,21 @@ select, input {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: baseline;
+  align-content: start;
   column-gap: 6px;
   transition: border-color .2s;
 }
 .res .lbl { grid-column: 1 / -1; font-size: .8rem; color: var(--muted); }
 .res .val { font-size: clamp(1.2rem, 6.2vw, 1.6rem); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .res .unit { font-size: .8rem; color: var(--muted); }
+.res .sub {
+  grid-column: 1 / -1;
+  font-size: .72rem; color: var(--muted);
+  white-space: pre-line; overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  min-height: 1.3em; /* Platz ist immer reserviert – kein Springen */
+}
 .res[data-k="down"] { --c: var(--down); }
 .res[data-k="up"] { --c: var(--up); }
 .res[data-k="ping"], .res[data-k="jitter"] { --c: var(--ping); }

@@ -143,7 +143,7 @@ export class HistoryView {
       const sub = [CONN_LABELS[e.conn] || 'Verbindung unbekannt', e.isp, e.place].filter(Boolean).join(' · ');
       left.append(h('span', 'e-sub', sub));
       const right = h('div', 'e-right');
-      right.append(h('span', 'e-down', `↓ ${formatMbps(e.down)}`), h('span', 'e-up', `↑ ${formatMbps(e.up)}`), h('span', 'e-ping', `${fmtMs(e.ping)} ms`));
+      right.append(h('span', 'e-down', `↓ ${formatMbps(e.down)}`), h('span', 'e-up', `↑ ${formatMbps(e.up)}`), h('span', 'e-ping', `${fmtMs(e.ping)} ms` + (e.down1 != null ? ` · 1 Verb.: ${formatMbps(e.down1)}` : e.streams === 'single' ? ' · 1 Verb.' : '')));
       const del = h('button', 'e-del');
       del.type = 'button';
       del.setAttribute('aria-label', `Messung vom ${fmtDate(e.t)} löschen`);

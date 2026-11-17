@@ -38,6 +38,9 @@
             <label>Datenlimit
               <select id="limit"></select>
             </label>
+            <label>Verbindungen
+              <select id="streams"></select>
+            </label>
             <label>Standort im Verlauf
               <select id="locMode"></select>
             </label>
@@ -58,8 +61,8 @@
     <div id="spark" class="spark"></div>
 
     <section class="results">
-      <div class="res" data-k="down"><span class="lbl">↓ Download</span><span class="val" id="down">–</span><span class="unit">Mbit/s</span></div>
-      <div class="res" data-k="up"><span class="lbl">↑ Upload</span><span class="val" id="up">–</span><span class="unit">Mbit/s</span></div>
+      <div class="res" data-k="down"><span class="lbl">↓ Download</span><span class="val" id="down">–</span><span class="unit">Mbit/s</span><span class="sub" id="downSub"></span></div>
+      <div class="res" data-k="up"><span class="lbl">↑ Upload</span><span class="val" id="up">–</span><span class="unit">Mbit/s</span><span class="sub" id="upSub"></span></div>
       <div class="res" data-k="ping"><span class="lbl">Ping</span><span class="val" id="ping">–</span><span class="unit">ms</span></div>
       <div class="res" data-k="jitter"><span class="lbl">Jitter</span><span class="val" id="jitter">–</span><span class="unit">ms</span></div>
     </section>
